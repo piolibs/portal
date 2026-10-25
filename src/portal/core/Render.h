@@ -24,13 +24,15 @@ namespace portal {
 
 // Page frame: the device name, the access level and the current menu path.
 // The dashboard header also shows the subtitle (e.g. network and address)
-// and the badge (e.g. "Online") when they are set.
+// and the badge (e.g. "Online") when they are set, the local dashboard the
+// firmware version.
 struct Layout {
     const char *name;
     Access access;
     const char *path;
     const char *subtitle = nullptr;
     const char *badge = nullptr;
+    const char *version = nullptr;
 };
 
 // Extra dashboard line computed on each render, e.g. the device time
@@ -41,6 +43,18 @@ struct Item {
 };
 
 using Items = std::vector<Item>;
+
+// Button on the local dashboard, posts the form token to the path. The
+// button shows busy while the action runs, the dashboard shows done after it.
+struct Action {
+    const char *path;
+    const char *label;
+    const char *busy;
+    const char *done;
+    std::function<void()> run;
+};
+
+using Actions = std::vector<Action>;
 using Rows = std::vector<std::pair<std::string, std::string>>;
 // Info page groups: a heading and its rows
 using Sections = std::vector<std::pair<const char *, Rows>>;
@@ -67,7 +81,11 @@ struct Wifi {
 extern const char STYLE_CSS[] PROGMEM;
 extern const char APP_JS[] PROGMEM;
 
-void renderDashboard(Writer &w, const Layout &layout, const Fields &fields, const Items &items);
+// Actions are shown on the local dashboard only; done is the path of the
+// action that has just run, its message is shown above its button
+void renderDashboard(Writer &w, const Layout &layout, const Fields &fields, const Items &items,
+                     const Actions &actions = {}, const std::string &token = {},
+                     const std::string &done = {});
 
 // {"key":"text",...} of the fields shown at the access level
 void renderValues(Writer &w, const Fields &fields, Access access);

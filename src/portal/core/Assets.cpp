@@ -63,6 +63,9 @@ const char STYLE_CSS[] PROGMEM =
     "font:inherit;font-size:17px;font-weight:600}"
     "button:disabled{opacity:.6}"
     "button.danger{background:none;border:2px solid var(--bad);color:var(--bad)}"
+    "button.action{display:flex;align-items:center;justify-content:center;gap:8px;background:none;"
+    "border:2px solid var(--ac);color:var(--ac)}"
+    "button.action:disabled{background:var(--bg);border-color:var(--line);color:var(--mu);opacity:1}"
     ".msg{display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:10px;"
     "background:var(--okb);color:var(--okf);font-size:15px}"
     ".msg.bad{background:none;border:2px solid var(--bad);color:var(--bad)}"
@@ -110,6 +113,14 @@ const char APP_JS[] PROGMEM =
     "d.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){"
     "d.querySelectorAll('.nets .on').forEach(function(o){o.classList.remove('on')});b.classList.add('on');"
     "$('s').value=b.getAttribute('data-s');$('p').value='';$('p').focus()})});"
+    // Dashboard actions: busy while the device runs one (reset when the
+    // page comes back from the history), the time of the done message, and
+    // a reload doesn't show it again
+    "d.querySelectorAll('form.act').forEach(function(f){var b=f.querySelector('button'),l=b.lastChild,t=l.textContent;"
+    "f.addEventListener('submit',function(){b.disabled=true;l.textContent=b.getAttribute('data-busy')});"
+    "window.addEventListener('pageshow',function(e){if(e.persisted){b.disabled=false;l.textContent=t}})});"
+    "var a=d.querySelector('[data-at]');if(a){a.lastChild.textContent+=' at '+new Date().toTimeString().slice(0,8);"
+    "history.replaceState(null,'','/')}"
     "var f=$('fw'),i=$('f');if(!f)return;"
     "i.addEventListener('change',function(){var x=i.files[0];if(x)$('fn').textContent=x.name+', '+x.size+' B'});"
     "f.addEventListener('submit',function(e){if(!i.files[0]||!window.FormData)return;e.preventDefault();"

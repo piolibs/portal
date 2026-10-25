@@ -328,7 +328,8 @@ int signalLevel(int32_t rssi)
     return 1;
 }
 
-void renderDashboard(Writer &w, const Layout &layout, const Fields &fields, const Items &items)
+void renderDashboard(Writer &w, const Layout &layout, const Fields &fields, const Items &items,
+                     const Actions &actions, const std::string &token, const std::string &done)
 {
     head(w, layout, 0);
 
@@ -390,8 +391,42 @@ void renderDashboard(Writer &w, const Layout &layout, const Fields &fields, cons
         list = true;
         row(w, item.label, item.value ? item.value() : std::string());
     }
+    if (layout.access == Access::Local && layout.version && *layout.version)
+    {
+        if (!list)
+            w.printP(PSTR("<div class=\"list\">"));
+        list = true;
+        row(w, "Firmware", layout.version);
+    }
     if (list)
         w.printP(PSTR("</div>"));
+
+    // An action changes the device state: not on the public port
+    if (layout.access == Access::Local)
+    {
+        for (const auto &action : actions)
+        {
+            // The script adds the time and drops ?done from the address
+            if (done == action.path)
+            {
+                w.printP(PSTR("<p class=\"msg\" role=\"status\" data-at>"));
+                icon(w, ICON_CHECK);
+                w.html(action.done);
+                w.printP(PSTR("</p>"));
+            }
+
+            w.printP(PSTR("<form class=\"act\" method=\"post\" action=\""));
+            w.html(action.path);
+            w.printP(PSTR("\">"));
+            tokenInput(w, token);
+            w.printP(PSTR("<button class=\"action\" data-busy=\""));
+            w.html(action.busy);
+            w.printP(PSTR("\">"));
+            icon(w, ICON_SCAN);
+            w.html(action.label);
+            w.printP(PSTR("</button></form>"));
+        }
+    }
 
     if (values)
         w.printP(PSTR("<p class=\"note\">Values refresh every 30 s</p>"));

@@ -60,6 +60,7 @@ echo "== local ${LOCAL}"
 
 status 200 "dashboard" "${LOCAL}/"
 body "<nav" "dashboard has the menu" "${LOCAL}/"
+body '<form class="act" method="post" action="/request"><input type="hidden" name="t" value="[0-9a-f]\{16\}">' "dashboard action has a token" "${LOCAL}/"
 status 200 "values" "${LOCAL}/api/values"
 header "content-type: application/json" "values are json" "${LOCAL}/api/values"
 status 200 "settings" "${LOCAL}/edit"
@@ -81,6 +82,7 @@ status 403 "settings with a wrong token" -X POST -d "t=0000000000000000&measurem
 status 403 "wifi without token" -X POST -d "s=x&p=12345678" "${LOCAL}/wifi"
 status 403 "scan without token" -X POST "${LOCAL}/wifi/scan"
 status 403 "restart without token" -X POST "${LOCAL}/restart"
+status 403 "action without token" -X POST "${LOCAL}/request"
 # A sized file: curl uploads /dev/null in chunks, the ESP8266 server takes none
 FIRMWARE=$(mktemp)
 trap 'rm -f "$FIRMWARE"' EXIT
@@ -103,7 +105,7 @@ for page in /edit /wifi /info /update /restart /request /unknown; do
     status 404 "no GET ${page}" "${PUBLIC}${page}"
 done
 
-for page in / /edit /wifi /wifi/scan /restart /update /api/values; do
+for page in / /edit /wifi /wifi/scan /restart /update /request /api/values; do
     status 404 "no POST ${page}" -X POST -d "t=x" "${PUBLIC}${page}"
 done
 
@@ -117,6 +119,12 @@ if [ "$WRITE" = "--write" ]; then
     status 303 "settings are saved" -X POST -d "t=${token}&measurement=smoke" "${LOCAL}/edit"
     body 'name="measurement" value="smoke"' "saved value is shown" "${LOCAL}/edit"
     status 303 "settings are restored" -X POST --data-urlencode "t=${token}" --data-urlencode "measurement=${old}" "${LOCAL}/edit"
+
+    echo "== dashboard action (runs it)"
+
+    status 303 "action runs" -X POST -d "t=${token}" "${LOCAL}/request"
+    body 'data-at>' "dashboard shows the action is done" "${LOCAL}/?done=/request"
+    no_body 'data-at>' "no done message without ?done" "${LOCAL}/"
 
     echo "== firmware update checks (nothing is flashed)"
 

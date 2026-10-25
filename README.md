@@ -61,6 +61,10 @@ void setup()
         server.send(200, "text/plain", "Measurements are requested");
     });
 
+    // Button on the local dashboard
+    web.action("/request", "Request measurements", "Requesting…", "Measurements are requested",
+               [] { requestMeasurements(); });
+
     if (!web.connect())          // stored WiFi or the setup access point
         ESP.restart();
 
@@ -87,6 +91,11 @@ a group with a heading on the dashboard and the settings page. `editable(onChang
 puts it on the settings page; `onChange` is called after the value is stored.
 A form with an invalid value saves nothing.
 
+`action(path, label, busy, done, run)` adds a button to the local dashboard:
+it posts the form token to `path` and shows `busy` while `run` is called, then
+the dashboard shows `done` with the time above the button. It is not on the
+public port.
+
 ## Pages
 
 | Path | Local | Public |
@@ -98,6 +107,7 @@ A form with an invalid value saves nothing.
 | `/info` system info, restart | yes | — |
 | `/update` firmware upload with progress | yes | — |
 | `on(path, ...)` extra routes | yes | — |
+| `action(path, ...)` dashboard buttons | yes | — |
 
 ## WiFi
 
@@ -119,8 +129,8 @@ when the time is over.
 - The public port registers read-only routes only; its dashboard has no menu
   and shows only published fields.
 - The local port has no password, but every change (settings, WiFi, scan,
-  restart, update) is a POST with a random per-boot token, so another site
-  opened in a LAN browser can't post the forms. Routes added by `on()` are GET
+  restart, update, dashboard buttons) is a POST with a random per-boot token,
+  so another site opened in a LAN browser can't post the forms. Routes added by `on()` are GET
   without a token: keep them free of changes that matter.
 - A firmware upload checks the token before the first chunk is flashed and
   again when it ends. The update is committed only when the file is a whole

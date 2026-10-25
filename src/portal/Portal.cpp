@@ -172,6 +172,13 @@ Portal &Portal::on(const char *path, Handler handler)
     return *this;
 }
 
+Portal &Portal::action(const char *path, const char *label, const char *busy, const char *done,
+                       std::function<void()> run)
+{
+    mActions.push_back({path, label, busy, done, std::move(run)});
+    return *this;
+}
+
 Portal &Portal::onSave(std::function<void()> callback)
 {
     mOnSave = std::move(callback);
@@ -362,6 +369,24 @@ void Portal::registerRoutes(ESP8266WebServer &server, Access access)
                 handler(server);
             });
         }
+
+        for (const auto &action : mActions)
+        {
+            server.on(action.path, HTTP_POST, [this, &server, action] {
+                touch(server);
+                logRequest(server, Access::Local);
+                sendHeaders(server, false);
+                if (!checkToken(server))
+                    return;
+
+                LOGI("action %s", action.path);
+                action.run();
+
+                // Reloading the result page doesn't run the action again
+                server.sendHeader(F("Location"), String(F("/?done=")) + action.path);
+                server.send(303, F("text/plain"), F(""));
+            });
+        }
     }
 
     server.onNotFound([this, &server, access] {
@@ -422,10 +447,11 @@ void Portal::handle(ESP8266WebServer &server, Access access, const Route &route)
                               : std::string(WiFi.SSID().c_str()) + " · " + WiFi.localIP().toString().c_str();
             frame.subtitle = subtitle.c_str();
             frame.badge = mSetup ? "Setup" : "Online";
+            frame.version = mVersion;
         }
 
         ServerWriter w(server, 200, PSTR("text/html; charset=utf-8"));
-        renderDashboard(w, frame, mFields, mItems);
+        renderDashboard(w, frame, mFields, mItems, mActions, mCsrf.token(), arg(server, "done"));
         break;
     }
 

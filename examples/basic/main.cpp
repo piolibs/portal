@@ -70,6 +70,10 @@ void setup()
         server.send(200, "text/plain", "Measurements are requested");
     });
 
+    // The same as a button on the local dashboard
+    web.action("/request", "Request measurements", "Requesting…", "Measurements are requested",
+               [] { LOGI("measurements are requested"); });
+
     if (!web.connect())
     {
         LOGW("WiFi is not connected, restart");

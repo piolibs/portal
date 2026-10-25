@@ -1,6 +1,6 @@
 {
     "name": "portal",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Lightweight web portal: WiFi setup, dashboard, settings, system info and firmware update with a read-only public port",
     "keywords": "web, portal, wifi, dashboard, ota, settings",
     "repository": {

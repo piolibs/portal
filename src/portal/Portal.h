@@ -77,6 +77,11 @@ public:
 
     // Extra GET route, on the local port only; added before connect()/begin()
     Portal &on(const char *path, Handler handler);
+    // Button on the local dashboard: a POST with the form token to path runs
+    // the action, the button shows busy meanwhile, then the dashboard shows
+    // done above the button; added before connect()/begin()
+    Portal &action(const char *path, const char *label, const char *busy, const char *done,
+                   std::function<void()> run);
     // Called after a saved form changed some values
     Portal &onSave(std::function<void()> callback);
 
@@ -135,6 +140,7 @@ private:
     Fields mFields;
     Items mItems;
     std::vector<std::pair<const char *, Handler>> mHandlers;
+    Actions mActions;
     std::function<void()> mOnSave;
 
     std::unique_ptr<ESP8266WebServer> mLocal;

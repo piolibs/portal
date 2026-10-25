@@ -533,6 +533,62 @@ void test_local_dashboard()
     ASSERT_NOT_CONTAINS(page, "Measurement");
 }
 
+void test_dashboard_actions_local_only()
+{
+    Store store;
+    Fields fields = makeFields(store);
+    Actions actions = {{"/request", "Request <now>", "Requesting…", "Sent", [] {}}};
+
+    StringWriter local;
+    renderDashboard(local, LOCAL, fields, {}, actions, "tok");
+    ASSERT_CONTAINS(local.str(), "<form class=\"act\" method=\"post\" action=\"/request\">"
+                                 "<input type=\"hidden\" name=\"t\" value=\"tok\">"
+                                 "<button class=\"action\" data-busy=\"Requesting…\"><svg");
+    // No done message without ?done
+    ASSERT_NOT_CONTAINS(local.str(), "data-at");
+    ASSERT_CONTAINS(local.str(), "</svg>Request &lt;now&gt;</button></form>");
+    // Above the note under the values
+    TEST_ASSERT_TRUE(local.str().find("action=\"/request\"") < local.str().find("Values refresh"));
+
+    StringWriter pub;
+    Layout pubVersion = PUBLIC;
+    pubVersion.version = "2.1.0";
+    renderDashboard(pub, pubVersion, fields, {}, actions, "tok");
+    ASSERT_NOT_CONTAINS(pub.str(), "2.1.0");
+    ASSERT_NOT_CONTAINS(pub.str(), "/request");
+    ASSERT_NOT_CONTAINS(pub.str(), "tok");
+    ASSERT_NOT_CONTAINS(pub.str(), "<form");
+}
+
+void test_dashboard_action_done()
+{
+    Store store;
+    Fields fields = makeFields(store);
+    Actions actions = {
+        {"/request", "Request", "Requesting…", "Measurements <sent>", [] {}},
+        {"/other", "Other", "Working…", "Other done", [] {}},
+    };
+
+    StringWriter w;
+    renderDashboard(w, LOCAL, fields, {}, actions, "tok", "/request");
+    const std::string &page = w.str();
+
+    // Above the button of its action only
+    ASSERT_CONTAINS(page, "<p class=\"msg\" role=\"status\" data-at><svg");
+    ASSERT_CONTAINS(page, "</svg>Measurements &lt;sent&gt;</p><form class=\"act\" method=\"post\" action=\"/request\">");
+    ASSERT_NOT_CONTAINS(page, "Other done");
+
+    // An unknown path shows nothing
+    StringWriter unknown;
+    renderDashboard(unknown, LOCAL, fields, {}, actions, "tok", "/x");
+    ASSERT_NOT_CONTAINS(unknown.str(), "data-at");
+
+    // Never on the public port
+    StringWriter pub;
+    renderDashboard(pub, PUBLIC, fields, {}, actions, "tok", "/request");
+    ASSERT_NOT_CONTAINS(pub.str(), "Measurements");
+}
+
 void test_render_escapes()
 {
     Store store;
@@ -701,9 +757,12 @@ void test_dashboard_header()
     Layout local = LOCAL;
     local.subtitle = "home · 10.0.0.2";
     local.badge = "Online";
+    local.version = "2.1.0";
 
     StringWriter w;
     renderDashboard(w, local, fields, {});
+    // The firmware row ends the list of the local dashboard
+    ASSERT_CONTAINS(w.str(), "<div class=\"row\"><span>Firmware</span><span>2.1.0</span></div></div>");
     ASSERT_CONTAINS(w.str(), "<small>home · 10.0.0.2</small>");
     ASSERT_CONTAINS(w.str(), "<span class=\"pill ok\"><svg width=\"8\" height=\"8\"");
     ASSERT_CONTAINS(w.str(), "</svg>Online</span>");
@@ -986,6 +1045,8 @@ int main()
     RUN_TEST(test_forms_carry_token);
     RUN_TEST(test_sections);
     RUN_TEST(test_dashboard_header);
+    RUN_TEST(test_dashboard_actions_local_only);
+    RUN_TEST(test_dashboard_action_done);
     RUN_TEST(test_signal_level);
     RUN_TEST(test_icons_have_size);
     RUN_TEST(test_assets_version);
